@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  tea-ranker:
+    build: .
+    container_name: teak_ranker
+    ports:
+      - "8080:4000"
+    volumes:
+      # Mount the current host folder to /app/data inside the container
+      - ./:/app/data
+    restart: unless-stopped

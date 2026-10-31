@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teak - Tea Leaderboard</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f7f6; color: #333; max-width: 600px; margin: 40px auto; padding: 20px; }
+        h1 { text-align: center; color: #2c3e50; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .tea-item { display: flex; justify-content: space-between; align-items: left; flex-direction: column; padding: 12px 0; border-bottom: 1px solid #eee; }
+        .tea-item:last-child { border-bottom: none; }
+        .tea-info { display: flex; align-items: center; gap: 15px; }
+        .rank { font-weight: bold; color: #7f8c8d; min-width: 25px; }
+        .tea-name { font-size: 1.1rem; }
+        .votes-badge {background: #e8f5e9; color: #2e7d32; padding: 4px 8px; border-radius: 12px; font-size: 0.9rem; font-weight: bold; }
+        .actions { gap: 5px; padding-top: 10px;}
+        button { cursor: pointer; padding: 6px 12px; border: none; border-radius: 4px; font-weight: bold;}
+        .btn-up { background: #4caf50; color: white; }
+        .btn-down { background: #f44336; color: white; }
+        .btn-stock { background: #729ece; color: white; }
+        .form-group { display: flex; gap: 10px;flex-direction: column; }
+        input[type="text"] {display: flex; padding: 10px; border: 1px solid #ccc; border-radius: 4px; flex-direction: column;}
+        .btn-add { background: #2196f3; color: white; }
+    </style>
+</head>
+<body>
+
+    <h1>☕ Tea Ranks</h1>
+
+    <div class="card">
+        <div id="stock">Loading rankings...</div>
+    </div>
+    <div class="card">
+        <div id="leaderboard">Loading rankings...</div>
+    </div>
+
+    <div class="card">
+        <h3>Add New Tea Variety</h3>
+        <div class="form-group">
+            <input type="text" id="teaName" placeholder="e.g., Jasmine Green, Rooibos Vanilla...">
+            <input type="text" id="teaManufacturer" placeholder="Teekanne, Meßmer,...">
+            <button class="btn-add" onclick="addTea()">Add Tea</button>
+        </div>
+    </div>
+
+    <script>
+        async function loadTeas() {
+            const res = await fetch('/api/teas');
+            const res_stock = await fetch('/api/teas/in-stock');
+            const teas = await res.json();
+            const teas_stock = await res_stock.json()
+            const leaderboard_container = document.getElementById('leaderboard');
+            const stock_container = document.getElementById('stock')
+
+            if(teas.length === 0) {
+                leaderboard_container.innerHTML = "<p>No teas added yet!</p>";
+                return;
+            }
+
+            leaderboard_container.innerHTML = teas.map((tea, index) => `
+                <div class="tea-item">
+                    <div class="tea-info">
+                        <span class="rank">#${index + 1}</span>
+                        <span class="tea-name">${tea.name}</span>
+                        <span class="tea-manufacturer">${tea.manufacturer}</span>
+                        <span class="votes-badge">${tea.votes} pts</span>
+                    </div>
+                    <div class="actions">
+                        <button class="btn-up" onclick="vote(${tea.id}, 'up')">▲</button>
+                        <button class="btn-down" onclick="vote(${tea.id}, 'down')">▼</button>
+                    </div>
+                </div>
+            `).join('');
+
+            stock_container.innerHTML = teas_stock.map((tea, index) => `
+                <div class="tea-item">
+                    <div class="tea-info">
+                        <span class="rank">${tea.votes}</span>
+                        <span class="tea-name">${tea.name}</span>
+                        <span class="tea-manufacturer">${tea.manufacturer}</span>
+                        <span class="votes-badge">${tea.votes} pts</span>
+                    </div>
+                    <div class="actions">
+                        <button class="btn-stock" onclick="vote(${tea.id}, 'stock')">✓</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function vote(id, direction) {
+            await fetch(`/api/teas/${id}/vote`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ direction })
+            });
+            loadTeas();
+        }
+
+async function addTea() {
+    const nameInput = document.getElementById('teaName');
+    const manufacturerInput = document.getElementById('teaManufacturer'); // Ensure you have this input field in your HTML
+
+    const name = nameInput.value.trim();
+    const manufacturer = manufacturerInput ? manufacturerInput.value.trim() : "";
+
+    if (!name) return;
+
+    await fetch('/api/teas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // Send BOTH fields to the server
+        body: JSON.stringify({ name, manufacturer })
+    });
+
+    nameInput.value = '';
+    if(manufacturerInput) manufacturerInput.value = '';
+    loadTeas();
+}
+
+        loadTeas();
+    </script>
+</body>
+</html>
